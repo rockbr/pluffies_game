@@ -1274,7 +1274,8 @@ export function updateGame(state, claw, deltaMs) {
       const lostSeconds = Math.floor(state.timerTick / 1000);
       state.timerTick -= lostSeconds * 1000;
       state.timer = Math.max(0, state.timer - lostSeconds);
-      if (state.timer === 0) {`r`n        handleRoundTimeout(state, claw, "O tempo acabou. -1 tentativa.");
+      if (state.timer === 0) {
+        handleRoundTimeout(state, claw, "O tempo acabou. -1 tentativa.");
         return;
       }
     }
