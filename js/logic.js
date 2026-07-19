@@ -432,7 +432,9 @@ function createSpecialPlush(state, phase, mainPlushes, bonusRound) {
     wobbleSeed: Math.random() * Math.PI * 2,
     variant,
     direction: Math.random() > 0.5 ? 1 : -1,
-    speed: Math.max(0.7, phase.plushSpeed * 1.05),
+    speed: variant === "angel" || variant === "skull"
+      ? Math.max(1.55, phase.plushSpeed * 1.28)
+      : Math.max(0.7, phase.plushSpeed * 1.05),
     visibleAlpha: variant === "ghost" ? 0.92 : 1,
     ghostTeleportTimer: variant === "ghost" ? 980 : 0,
     ghostPhase: variant === "ghost" ? "visible" : "",
@@ -1291,7 +1293,8 @@ export function updateGame(state, claw, deltaMs) {
     moveClaw(claw, state.moveDirection, slowFactor * deltaFactor, state.touchTargetX, state.touchControlActive);
   }
 
-  if (!claw.dropping && !claw.returning && !claw.carrying && phase.plushSpeed > 0 && !phase.clearMachine) {
+  const specialAlwaysMoves = state.specialPlush?.variant === "angel" || state.specialPlush?.variant === "skull";
+  if (!claw.dropping && !claw.returning && !claw.carrying && !phase.clearMachine && (phase.plushSpeed > 0 || specialAlwaysMoves)) {
     [...activePlushes, state.specialPlush].filter(Boolean).forEach((plush) => {
       if (plush.variant === "ghost") {
         plush.ghostTeleportTimer -= deltaMs;
