@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pluffies</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="game-screen">
+      <section class="play-area">
+        <section class="machine-panel">
+          <aside class="machine-side machine-side-left">
+            <div class="machine-side-card">
+              <span class="machine-side-label">Tempo</span>
+              <strong id="elapsed-time" class="machine-side-value">00:00</strong>
+            </div>
+            <div class="machine-side-card">
+              <span class="machine-side-label">Fase</span>
+              <strong id="phase-name" class="machine-side-value">Fase 1</strong>
+            </div>
+            <div class="machine-side-card machine-side-continue">
+              <span class="machine-side-label">Continue</span>
+              <strong id="continue-count" class="machine-side-value">0</strong>
+            </div>
+            <div class="machine-side-card machine-side-points">
+              <span class="machine-side-label">Pontos</span>
+              <strong id="points" class="machine-side-value">0</strong>
+            </div>
+          </aside>
+
+          <div id="start-overlay" class="start-overlay">
+            <div class="start-card">
+              <p class="start-kicker">Arcade Start</p>
+              <h1>Pluffies</h1>
+              <label class="start-label" for="player-name">Nome do jogador</label>
+              <input id="player-name" class="start-input" type="text" maxlength="14" placeholder="Digite seu nome">
+              <button id="start-game" class="start-button" type="button">Start</button>
+            </div>
+          </div>
+          <canvas id="game" width="420" height="720" aria-label="Area do jogo"></canvas>
+          <aside class="machine-side machine-side-right">
+            <p id="message" class="message">
+              Use A e D ou as setas. Aperte espaco ou seta para baixo para soltar.
+            </p>
+          </aside>
+        </section>
+
+        <aside class="side-panel">
+          <section id="status-panel" class="status-panel">
+            <button id="menu-toggle" class="hud-button" type="button">Menu</button>
+            <button id="pause-toggle" class="hud-button hud-button-soft" type="button">Pausar</button>
+            <div id="hud-stats" class="hud-stats" hidden></div>
+          </section>
+
+          <section id="collection-summary" class="collection-panel">
+            <div class="collection-header">
+              <span class="collection-kicker">Coleção</span>
+              <div class="collection-actions">
+                <strong id="collection-count">0</strong>
+                <button id="collection-open" class="collection-open" type="button" aria-label="Ver coleção completa">+</button>
+              </div>
+            </div>
+            <div id="collection-list" class="collection-list">
+              <p class="collection-empty">Os ursos pegos vao aparecer aqui.</p>
+            </div>
+          </section>
+
+          <section class="ranking-panel">
+            <div class="collection-header">
+              <span class="collection-kicker">Ranking</span>
+              <strong id="ranking-count">Top 3</strong>
+            </div>
+            <div id="ranking-list" class="ranking-list">
+              <p class="collection-empty">Nenhuma partida registrada ainda.</p>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </section>
+  </main>
+
+  <aside id="menu-panel" class="menu-panel" aria-hidden="true">
+    <div class="menu-card">
+      <div class="menu-header">
+        <div>
+          <p class="menu-kicker"></p>
+          <h2>Fases e objetivo</h2>
+        </div>
+        <button id="menu-close" class="hud-button" type="button">Fechar</button>
+      </div>
+
+      <div class="menu-section menu-actions">
+        <button id="sound-toggle" class="hud-button hud-button-soft" type="button">Som: On</button>
+        <button id="help-toggle" class="hud-button hud-button-soft" type="button">Ajuda</button>        
+        <button id="logout-player" class="hud-button hud-button-soft" type="button">Trocar Jogador</button>
+        <button id="exit-game" class="hud-button hud-button-soft" type="button">Sair do Jogo</button>
+      </div>
+    </div>
+  </aside>
+
+  <aside id="help-panel" class="menu-panel" aria-hidden="true">
+    <div class="menu-card help-card">
+      <div class="menu-header">
+        <div>
+          <p class="menu-kicker">Ajuda</p>
+          <h2>Como jogar</h2>
+        </div>
+        <button id="help-close" class="hud-button" type="button">Fechar</button>
+      </div>
+
+      <div class="menu-section help-section">
+        <h3>Controles</h3>
+        <p class="phase-description">Use <strong>A</strong> e <strong>D</strong> ou as setas para mover. Aperte <strong>Espaço</strong> ou <strong>Seta para baixo</strong> para soltar a garra.</p>
+      </div>
+
+      <div class="menu-section help-section">
+        <h3>Objetivo</h3>
+        <p class="phase-description">Em cada fase você precisa pegar <strong>2 ursos</strong> antes do tempo acabar. Presentes e ursos especiais mudam a rodada.</p>
+      </div>
+
+      <div class="menu-section help-section">
+        <h3>Personagens</h3>
+        <div class="help-grid">
+          <div class="help-item">
+            <strong>Urso comum</strong>
+            <p class="phase-description">Dá os pontos normais da fase.</p>
+          </div>
+          <div class="help-item">
+            <strong>Urso anjo</strong>
+            <p class="phase-description">Dá o dobro de pontos e aparece raramente.</p>
+          </div>
+          <div class="help-item">
+            <strong>Urso caveira</strong>
+            <p class="phase-description">Tira pontos. Se pegar ele, a rodada especial acaba.</p>
+          </div>
+          <div class="help-item">
+            <strong>Presente</strong>
+            <p class="phase-description">Pode dar bônus ou punição, dependendo da cor.</p>
+          </div>
+          <div class="help-item">
+            <strong>Rodada dupla</strong>
+            <p class="phase-description">A cada 20 fases pode aparecer uma rodada com 2 ursos iguais para duplicar os pontos.</p>
+          </div>
+          <div class="help-item">
+            <strong>Rodada tripla</strong>
+            <p class="phase-description">Também pode vir em ciclos de 20 fases, com 3 ursos iguais para triplicar os pontos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <aside id="collection-panel" class="menu-panel" aria-hidden="true">
+    <div class="menu-card collection-modal-card">
+      <div class="menu-header">
+        <div>
+          <p class="menu-kicker">Coleção</p>
+          <h2>Todos os ursos pegos</h2>
+        </div>
+        <button id="collection-close" class="hud-button" type="button">Fechar</button>
+      </div>
+      <div id="collection-full-list" class="collection-full-list">
+        <p class="collection-empty">Os ursos pegos vao aparecer aqui.</p>
+      </div>
+    </div>
+  </aside>
+
+  <aside id="ranking-panel" class="menu-panel" aria-hidden="true">
+    <div class="menu-card collection-modal-card ranking-modal-card">
+      <div class="menu-header">
+        <div>
+          <p class="menu-kicker">Ranking</p>
+          <h2 id="ranking-detail-title">Coleção do jogador</h2>
+          <p id="ranking-detail-meta" class="phase-description"></p>
+        </div>
+        <button id="ranking-close" class="hud-button" type="button">Fechar</button>
+      </div>
+      <div id="ranking-detail-list" class="collection-full-list">
+        <p class="collection-empty">Nenhuma coleção registrada.</p>
+      </div>
+    </div>
+  </aside>
+
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
