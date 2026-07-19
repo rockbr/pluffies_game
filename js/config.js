@@ -155,6 +155,7 @@ export function createInitialState() {
     presentFlash: null,
     feedbackPulse: null,
     feedbackOverlay: null,
+    ghostTrail: [],
     screenShake: 0,
     soundEvents: [],
     slowMotionTick: 0,
@@ -173,6 +174,7 @@ export function createInitialState() {
     spawnedContinuePhases: [],
     specialAssignments: {},
     usedSpecialWindows: { skull: [], angel: [], ghost: [] },
+    bigBearMashRemaining: 0,
     lastPlushKey: "",
     pileShuffleStep: 0,
     pileShuffleCooldown: 0,
@@ -186,3 +188,5 @@ export function createInitialState() {
     paused: false,
   };
 }
+
+

@@ -229,7 +229,7 @@ function drawCabinet(state) {
   roundRect(layout.glassX + 14, layout.railY + 2, 30, 12, 4);
   roundRect(layout.glassX + layout.glassWidth - 44, layout.railY + 2, 30, 12, 4);
 
-  // Floor plane — gives the toys a real surface to sit on instead of floating in a void
+  // Floor plane â€” gives the toys a real surface to sit on instead of floating in a void
   const floorTop = layout.shelfY - 50;
   const floorHeight = 68;
   const floorX = layout.glassX + 12;
@@ -283,7 +283,7 @@ function drawCabinet(state) {
   ctx.fillStyle = spotlight;
   roundRect(layout.glassX + 26, layout.glassY + 28, layout.glassWidth - 52, layout.glassHeight - 110, 10);
 
-  // Outer base shell — brushed metal gradient instead of flat fill
+  // Outer base shell â€” brushed metal gradient instead of flat fill
   const baseShell = ctx.createLinearGradient(
     layout.cabinetX,
     layout.baseY,
@@ -342,7 +342,7 @@ function drawCabinet(state) {
   ctx.lineWidth = 1;
   strokeRoundRect(layout.cabinetX + 22, layout.baseY + 12, layout.cabinetWidth - 44, layout.bottomHeight - 22, 12);
 
-  // Prize chute — chrome bezel with glowing outline and a slotted flap
+  // Prize chute â€” chrome bezel with glowing outline and a slotted flap
   const chuteGradient = ctx.createLinearGradient(
     layout.cabinetX + 22,
     layout.baseY + 18,
@@ -386,9 +386,9 @@ function drawCabinet(state) {
   ctx.font = "700 10px Trebuchet MS";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("SAÍDA", layout.cabinetX + 54, layout.baseY + 86);
+  ctx.fillText("SAÃDA", layout.cabinetX + 54, layout.baseY + 86);
 
-  // Control console — brushed panel with a subtle sheen
+  // Control console â€” brushed panel with a subtle sheen
   const consolePanel = ctx.createLinearGradient(
     layout.cabinetX + 138,
     layout.baseY + 28,
@@ -722,12 +722,39 @@ function drawPresent(present) {
   ctx.shadowBlur = 12;
   ctx.shadowOffsetY = 5;
   ctx.fillStyle = palette.box;
-  roundRect(x, y, size, size, 8);
+  if (present.type === "red") {
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + 2);
+    ctx.lineTo(x + size - 6, y + 4);
+    ctx.lineTo(x + size - 2, y + size * 0.28);
+    ctx.lineTo(x + size - 10, y + size * 0.52);
+    ctx.lineTo(x + size - 2, y + size - 6);
+    ctx.lineTo(x + size * 0.62, y + size - 2);
+    ctx.lineTo(x + size * 0.42, y + size - 10);
+    ctx.lineTo(x + 8, y + size - 2);
+    ctx.lineTo(x + 2, y + size * 0.62);
+    ctx.lineTo(x + 10, y + size * 0.34);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    roundRect(x, y, size, size, 8);
+  }
   ctx.restore();
 
   ctx.fillStyle = palette.ribbon;
-  roundRect(x + size * 0.42, y, size * 0.16, size, 4);
-  roundRect(x, y + size * 0.42, size, size * 0.16, 4);
+  if (present.type === "red") {
+    ctx.fillRect(x + size * 0.44, y + size * 0.06, size * 0.12, size * 0.86);
+    ctx.beginPath();
+    ctx.moveTo(x + size * 0.06, y + size * 0.44);
+    ctx.lineTo(x + size * 0.94, y + size * 0.44);
+    ctx.lineTo(x + size * 0.86, y + size * 0.58);
+    ctx.lineTo(x + size * 0.14, y + size * 0.58);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    roundRect(x + size * 0.42, y, size * 0.16, size, 4);
+    roundRect(x, y + size * 0.42, size, size * 0.16, 4);
+  }
 
   ctx.fillStyle = palette.ribbon;
   ctx.beginPath();
@@ -753,6 +780,26 @@ function drawPresent(present) {
   }
 }
 
+function drawGhostTrail(ghostTrail = []) {
+  ghostTrail.forEach((trail) => {
+    const progress = trail.timer / trail.maxTimer;
+    const alpha = Math.max(0, progress * 0.34);
+    const gradient = ctx.createLinearGradient(trail.fromX, trail.fromY, trail.toX, trail.toY);
+    gradient.addColorStop(0, `rgba(143,247,239,${alpha})`);
+    gradient.addColorStop(0.5, `rgba(223,255,252,${alpha * 0.8})`);
+    gradient.addColorStop(1, "rgba(143,247,239,0)");
+    ctx.save();
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 10 * progress + 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(trail.fromX, trail.fromY - 8);
+    ctx.quadraticCurveTo((trail.fromX + trail.toX) / 2, trail.fromY - 28, trail.toX, trail.toY - 8);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
 function drawPresentFlash(presentFlash) {
   const styles = {
     green: { main: "#57d66b", glow: "rgba(87,214,107,0.35)" },
@@ -764,6 +811,7 @@ function drawPresentFlash(presentFlash) {
     purple: { main: "#a46ce8", glow: "rgba(164,108,232,0.35)" },
     white: { main: "#f3f5f7", glow: "rgba(243,245,247,0.35)" },
     angel: { main: "#ffd84d", glow: "rgba(255,216,77,0.42)" },
+    ghost: { main: "#8ff7ef", glow: "rgba(143,247,239,0.42)" },
     skull: { main: "#ef5a4c", glow: "rgba(239,90,76,0.42)" },
     double: { main: "#6ce3d7", glow: "rgba(108,227,215,0.42)" },
     triple: { main: "#ffd84d", glow: "rgba(255,216,77,0.42)" },
@@ -1038,7 +1086,7 @@ function drawPlush(plush, options = {}) {
   ctx.ellipse(r * 0.68, r * 0.68, r * 0.3, r * 0.22, 0.35, 0, Math.PI * 2);
   ctx.fill();
 
-  // Ears — outer fur circle with a softer inner-ear circle (panda ears stay solid black)
+  // Ears â€” outer fur circle with a softer inner-ear circle (panda ears stay solid black)
   const earY = -r * 0.8;
   const earR = r * 0.38;
   ctx.fillStyle = earColor;
@@ -1083,7 +1131,7 @@ function drawPlush(plush, options = {}) {
     ctx.fill();
   }
 
-  // Head — soft radial shading gives it a plush, rounded feel instead of a flat disc
+  // Head â€” soft radial shading gives it a plush, rounded feel instead of a flat disc
   const headGradient = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.15, 0, 0, r * 1.05);
   headGradient.addColorStop(0, lightColor);
   headGradient.addColorStop(0.55, bodyColor);
@@ -1145,7 +1193,7 @@ function drawPlush(plush, options = {}) {
   ctx.quadraticCurveTo(r * 0.14, r * 0.5, r * 0.24, r * 0.42);
   ctx.stroke();
 
-  // Accessories — this is what makes each bear read as a different "type"
+  // Accessories â€” this is what makes each bear read as a different "type"
   if (variant === "bow") {
     const bowY = r * 0.66;
     ctx.fillStyle = accent;
@@ -1222,6 +1270,27 @@ function drawPlush(plush, options = {}) {
     ctx.ellipse(-r * 0.86, r * 0.08, r * 0.24, r * 0.48, -0.55, 0, Math.PI * 2);
     ctx.ellipse(r * 0.86, r * 0.08, r * 0.24, r * 0.48, 0.55, 0, Math.PI * 2);
     ctx.fill();
+  } else if (variant === "big") {
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.font = `900 ${Math.max(12, r * 0.42)}px Trebuchet MS`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("BIG", 0, -r * 1.04);
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.66, r * 0.34, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (variant === "kangaroo") {
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.ellipse(r * 0.26, r * 0.42, r * 0.28, r * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = shadeColor(bodyColor, -30);
+    ctx.lineWidth = Math.max(1.4, r * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(r * 0.68, r * 0.22);
+    ctx.quadraticCurveTo(r * 1.12, -r * 0.1, r * 0.96, -r * 0.52);
+    ctx.stroke();
   } else if (variant === "ghost") {
     ctx.fillStyle = "rgba(255,255,255,0.88)";
     ctx.beginPath();
@@ -1493,6 +1562,9 @@ export function drawGame(state, claw) {
   if (state.present) {
     drawPresent(state.present);
   }
+  if (state.ghostTrail?.length) {
+    drawGhostTrail(state.ghostTrail);
+  }
   (state.plushes ?? []).forEach((plush) => {
     drawPlush(plush);
   });
@@ -1500,7 +1572,12 @@ export function drawGame(state, claw) {
     drawPlush(state.plush);
   }
   if (state.specialPlush) {
+    ctx.save();
+    if (state.specialPlush.variant === "ghost") {
+      ctx.globalAlpha = state.specialPlush.visibleAlpha ?? 1;
+    }
     drawPlush(state.specialPlush);
+    ctx.restore();
   }
   if (state.exitAnimation) {
     drawExitAnimation(state.exitAnimation);

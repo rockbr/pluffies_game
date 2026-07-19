@@ -22,6 +22,8 @@ const VARIANT_NAMES = {
   skull: "Urso Caveira",
   angel: "Urso Anjo",
   ghost: "Urso Fantasma",
+  big: "BIG Urso",
+  kangaroo: "Urso Canguru",
 };
 const PLUSH_VARIANTS = ["classic", "bow", "patch", "bandana", "star", "panda"];
 
@@ -42,6 +44,8 @@ const MONTHLY_THEMES = {
 
 const VARIANT_RARITY_LABELS = {
   ghost: "LENDARIO",
+  big: "RARO",
+  kangaroo: "ESPECIAL",
   panda: "RARO",
   star: "ESPECIAL",
   bandana: "ESPECIAL",
@@ -111,6 +115,23 @@ function getThemeChance(phaseId) {
   return 0.18;
 }
 
+function getSpecialAnchorPoints() {
+  return [
+    machine.x + 78,
+    machine.x + machine.width * 0.35,
+    machine.x + machine.width * 0.65,
+    machine.x + machine.width - 78,
+  ];
+}
+
+function isDoubleRoundPhase(phaseId) {
+  return phaseId > 20 && phaseId % 10 !== 0 && phaseId % 2 === 0;
+}
+
+function isTripleRoundPhase(phaseId) {
+  return phaseId > 30 && phaseId % 10 !== 0 && phaseId % 2 === 1;
+}
+
 function getRoundTargetCaptures(state, phase) {
   return state.bonusRound?.count ?? phase.targetCaptures;
 }
@@ -174,6 +195,8 @@ function resetRound(state, claw, options = {}) {
 
   state.moveDirection = 0;
   state.touchTargetX = claw.x;
+  state.bigBearMashRemaining = 0;
+  state.ghostTrail = [];
   if (!preserveRoundState) {
     state.bonusRound = getBonusRoundConfig(state, phase);
     state.bonusRoundScore = 0;
@@ -295,24 +318,26 @@ function ensureGhostAssignment(state, phaseId) {
 }
 
 function getBonusRoundConfig(state, phase) {
-  if (phase.clearMachine || phase.id < 20 || phase.id % 20 !== 0) {
+  if (phase.clearMachine || state.usedBonusPhaseIds.includes(phase.id)) {
     return null;
   }
 
-  if (state.usedBonusPhaseIds.includes(phase.id)) {
-    return null;
+  let count = 0;
+  if (isTripleRoundPhase(phase.id)) {
+    count = 3;
+  } else if (isDoubleRoundPhase(phase.id)) {
+    count = 2;
   }
 
-  const assignment = ensureBonusAssignment(state, phase.id);
-  if (assignment.phaseId !== phase.id) {
+  if (!count) {
     return null;
   }
 
   state.usedBonusPhaseIds.push(phase.id);
 
   return {
-    count: assignment.count,
-    multiplier: assignment.count,
+    count,
+    multiplier: count,
   };
 }
 
@@ -345,6 +370,14 @@ function createSpecialPlush(state, phase, mainPlushes, bonusRound) {
     }
   }
 
+  if (!variant && !bonusRound && phase.id >= 25 && phase.id % 10 === 5) {
+    variant = "big";
+  }
+
+  if (!variant && !bonusRound && phase.id >= 18 && phase.id % 10 === 8) {
+    variant = "kangaroo";
+  }
+
   if (!variant) {
     return null;
   }
@@ -372,14 +405,40 @@ function createSpecialPlush(state, phase, mainPlushes, bonusRound) {
   return {
     x,
     y: machine.y + machine.height - 140,
-    radius: Math.max(24, phase.plushRadius * (bonusRound ? 0.78 : 0.88)),
-    color: variant === "angel" ? "#fff0d9" : variant === "ghost" ? "#d3fbf4" : "#fff3eb",
-    accent: variant === "angel" ? "#ffd84d" : variant === "ghost" ? "#7af0ff" : "#d21428",
+    radius: variant === "big"
+      ? Math.max(60, phase.plushRadius * 1.74)
+      : variant === "kangaroo"
+        ? Math.max(44, phase.plushRadius * 1.34)
+        : Math.max(24, phase.plushRadius * (bonusRound ? 0.78 : 0.88)),
+    color: variant === "angel"
+      ? "#fff0d9"
+      : variant === "ghost"
+        ? "#d3fbf4"
+        : variant === "big"
+          ? "#f0b04d"
+          : variant === "kangaroo"
+            ? "#c98b58"
+            : "#fff3eb",
+    accent: variant === "angel"
+      ? "#ffd84d"
+      : variant === "ghost"
+        ? "#7af0ff"
+        : variant === "big"
+          ? "#ff7b38"
+          : variant === "kangaroo"
+            ? "#ffe3a7"
+            : "#d21428",
     ears: 2,
     wobbleSeed: Math.random() * Math.PI * 2,
     variant,
     direction: Math.random() > 0.5 ? 1 : -1,
     speed: Math.max(0.7, phase.plushSpeed * 1.05),
+    visibleAlpha: variant === "ghost" ? 0.92 : 1,
+    ghostTeleportTimer: variant === "ghost" ? 980 : 0,
+    ghostPhase: variant === "ghost" ? "visible" : "",
+    kangarooJumpTimer: variant === "kangaroo" ? 820 : 0,
+    kangarooJumping: false,
+    kangarooGroundY: machine.y + machine.height - 140,
   };
 }
 
@@ -668,6 +727,12 @@ function attemptCatch(state, claw) {
   let bestScore = -1;
 
   candidates.forEach((plush) => {
+    if (plush.variant === "ghost" && (plush.visibleAlpha ?? 1) < 0.55) {
+      return;
+    }
+    if (plush.variant === "kangaroo" && plush.kangarooJumping) {
+      return;
+    }
     const tolerance = plush.radius * 1.08;
     const horizontalDistance = Math.abs(claw.x - plush.x);
     const alignmentScore = Math.max(0, 1 - horizontalDistance / tolerance);
@@ -837,6 +902,7 @@ function handleWin(state, claw) {
 
   renderCollection(state);
   state.phaseCatchCount += 1;
+  state.bigBearMashRemaining = 0;
 
   if (state.phaseCatchCount >= targetCaptures) {
     if (state.phaseIndex + 1 < phases.length) {
@@ -949,7 +1015,7 @@ function resolveDropAtBottom(state, claw) {
   }
 
   if (caughtPlush) {
-    const phasePoints = caughtPlush.variant === "angel" ? phase.points * 2 : phase.points;
+    const phasePoints = phase.points * getPointMultiplier(caughtPlush.variant);
     const rarityLabel = VARIANT_RARITY_LABELS[caughtPlush.variant];
     claw.carrying = true;
     claw.dropping = false;
@@ -960,6 +1026,7 @@ function resolveDropAtBottom(state, claw) {
     if (caughtPlush === state.specialPlush) {
       state.specialPlush = null;
     }
+    state.bigBearMashRemaining = caughtPlush.variant === "big" ? 2 : 0;
     queueSound(state, "catch");
     triggerVisualFeedback(state, {
       x: caughtPlush.x,
@@ -970,7 +1037,11 @@ function resolveDropAtBottom(state, claw) {
       overlayTimer: 180,
       shake: 6,
     });
-    setMessage("Pegou. Subindo com a pelucia.");
+    setMessage(
+      caughtPlush.variant === "big"
+        ? "BIG Urso pego. Aperte PEGAR mais 2 vezes para subir."
+        : "Pegou. Subindo com a pelucia."
+    );
     return;
   }
 
@@ -1041,6 +1112,27 @@ export function resetPhase(state, claw, resetMessage = true) {
 }
 
 export function beginDrop(state, claw) {
+  if (claw.carrying && state.plush?.variant === "big" && state.bigBearMashRemaining > 0) {
+    state.bigBearMashRemaining -= 1;
+    state.buttonPress = 1;
+    queueSound(state, "catch");
+    triggerVisualFeedback(state, {
+      x: claw.x,
+      y: claw.y + claw.armHeight + 92,
+      color: "#ffb24f",
+      label: `${Math.max(0, state.bigBearMashRemaining)}x`,
+      pulseTimer: 260,
+      overlayTimer: 120,
+      shake: 4,
+    });
+    setMessage(
+      state.bigBearMashRemaining > 0
+        ? `BIG Urso pesado. Aperte PEGAR mais ${state.bigBearMashRemaining} vez(es).`
+        : "BIG Urso liberado. Subindo!"
+    );
+    return;
+  }
+
   if (state.resultLock || state.gameOver || claw.dropping || claw.returning) {
     return;
   }
@@ -1070,7 +1162,8 @@ export function restartAfterGameOver(state, claw) {
   state.specialAssignments = {};
   state.usedSpecialWindows = { skull: [], angel: [], ghost: [] };
   state.plushes = [];
-  state.specialPlush = null;
+  state.bigBearMashRemaining = 0;
+  state.ghostTrail = [];
   state.extraTries = 0;
   state.phaseIndex = 0;
   state.unlocked = 1;
@@ -1181,11 +1274,16 @@ export function updateGame(state, claw, deltaMs) {
       const lostSeconds = Math.floor(state.timerTick / 1000);
       state.timerTick -= lostSeconds * 1000;
       state.timer = Math.max(0, state.timer - lostSeconds);
-      if (state.timer === 0) {
-        handleRoundTimeout(state, claw, "O tempo acabou. -1 tentativa.");
+      if (state.timer === 0) {`r`n        handleRoundTimeout(state, claw, "O tempo acabou. -1 tentativa.");
         return;
       }
     }
+  }
+
+  if (state.ghostTrail?.length) {
+    state.ghostTrail = state.ghostTrail
+      .map((trail) => ({ ...trail, timer: Math.max(0, trail.timer - deltaMs) }))
+      .filter((trail) => trail.timer > 0);
   }
 
   if (!state.resultLock) {
@@ -1194,6 +1292,72 @@ export function updateGame(state, claw, deltaMs) {
 
   if (!claw.dropping && !claw.returning && !claw.carrying && phase.plushSpeed > 0 && !phase.clearMachine) {
     [...activePlushes, state.specialPlush].filter(Boolean).forEach((plush) => {
+      if (plush.variant === "ghost") {
+        plush.ghostTeleportTimer -= deltaMs;
+        if (plush.ghostPhase === "visible") {
+          if (plush.ghostTeleportTimer <= 320) {
+            plush.visibleAlpha = Math.max(0, (plush.ghostTeleportTimer / 320) * 0.92);
+          } else {
+            plush.visibleAlpha = 0.92;
+          }
+        } else if (plush.ghostPhase === "vanishing") {
+          plush.visibleAlpha = 0;
+        } else if (plush.ghostPhase === "appearing") {
+          plush.visibleAlpha = Math.min(0.92, (1 - (plush.ghostTeleportTimer / 360)) * 0.92);
+        }
+
+        if (plush.ghostTeleportTimer <= 0) {
+          if (plush.ghostPhase === "visible") {
+            plush.ghostPhase = "vanishing";
+            plush.ghostTeleportTimer = 180;
+            plush.visibleAlpha = 0;
+          } else if (plush.ghostPhase === "vanishing") {
+            const anchors = getSpecialAnchorPoints();
+            const currentZone = anchors.findIndex((value) => Math.abs(value - plush.x) < 20);
+            const availableAnchors = anchors.filter((_, index) => index !== currentZone);
+            const nextX = availableAnchors[Math.floor(Math.random() * availableAnchors.length)] ?? anchors[0];
+            state.ghostTrail.push({ fromX: plush.x, fromY: plush.y, toX: nextX, toY: plush.y, timer: 420, maxTimer: 420 });
+            plush.x = nextX;
+            plush.direction = Math.random() > 0.5 ? 1 : -1;
+            plush.ghostPhase = "appearing";
+            plush.ghostTeleportTimer = 360;
+            plush.visibleAlpha = 0;
+          } else {
+            plush.ghostPhase = "visible";
+            plush.ghostTeleportTimer = 980;
+            plush.visibleAlpha = 0.92;
+          }
+        }
+        return;
+      }
+
+      if (plush.variant === "kangaroo") {
+        plush.kangarooJumpTimer -= deltaMs;
+        if (plush.kangarooJumpTimer <= 0) {
+          plush.kangarooJumping = !plush.kangarooJumping;
+          plush.kangarooJumpTimer = plush.kangarooJumping ? 520 : 860;
+          if (plush.kangarooJumping) {
+            const anchors = getSpecialAnchorPoints();
+            const currentIndex = anchors.findIndex((value) => Math.abs(value - plush.x) < 16);
+            const nextIndex = currentIndex <= 1 ? 3 : 0;
+            plush.direction = nextIndex > currentIndex ? 1 : -1;
+            plush.targetJumpX = anchors[nextIndex];
+          }
+        }
+
+        if (plush.kangarooJumping) {
+          const deltaX = (plush.targetJumpX ?? plush.x) - plush.x;
+          plush.x += Math.sign(deltaX) * Math.min(Math.abs(deltaX), 3.6 * deltaFactor);
+          const jumpProgress = 1 - (plush.kangarooJumpTimer / 520);
+          plush.y = plush.kangarooGroundY - Math.sin(Math.max(0, Math.min(1, jumpProgress)) * Math.PI) * 44;
+          if (Math.abs(deltaX) <= 4) {
+            plush.x = plush.targetJumpX ?? plush.x;
+          }
+        } else {
+          plush.y = plush.kangarooGroundY;
+        }
+      }
+
       const sidePadding = plush.radius + 18;
       plush.x += plush.direction * plush.speed * slowFactor * deltaFactor;
       if (plush.x <= machine.x + sidePadding || plush.x >= machine.x + machine.width - sidePadding) {
@@ -1215,9 +1379,13 @@ export function updateGame(state, claw, deltaMs) {
       resolveDropAtBottom(state, claw);
     }
   } else if (claw.returning) {
+    if (claw.carrying && state.plush?.variant === "big" && state.bigBearMashRemaining > 0 && claw.armHeight <= 98) {
+      claw.armHeight = 98;
+    } else {
     claw.armHeight -= 10 * slowFactor * deltaFactor;
     if (claw.armHeight <= 0) {
       finishReturn(state, claw);
+    }
     }
   }
 
@@ -1236,7 +1404,9 @@ export function updateGame(state, claw, deltaMs) {
       plush.y = machine.y + machine.height - 138 - (state.bonusRound ? Math.min(8, index * 4) : 0);
     });
     if (state.specialPlush) {
-      state.specialPlush.y = machine.y + machine.height - 140;
+      if (state.specialPlush.variant !== "kangaroo") {
+        state.specialPlush.y = machine.y + machine.height - 140;
+      }
     }
     state.plush = state.plushes[0] ?? null;
     state.plushVisible = true;
@@ -1273,3 +1443,4 @@ export function updateGame(state, claw, deltaMs) {
     }
   }
 }
+

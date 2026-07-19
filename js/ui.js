@@ -50,7 +50,7 @@ export function renderCollection(state) {
   const inlineOpenButton = document.createElement("button");
   inlineOpenButton.type = "button";
   inlineOpenButton.className = "collection-open collection-open-inside";
-  inlineOpenButton.setAttribute("aria-label", "Ver coleção completa");
+  inlineOpenButton.setAttribute("aria-label", "Ver colecao completa");
   inlineOpenButton.textContent = "+";
   inlineOpenButton.addEventListener("click", openCollection);
   featuredItem.appendChild(inlineOpenButton);
@@ -108,7 +108,7 @@ export function renderRanking(entries, currentPlayer = "") {
 
     const detail = document.createElement("span");
     detail.className = "ranking-detail";
-    detail.textContent = `Fase ${entry.phase}  ·  ${entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000)}`;
+    detail.textContent = `F${entry.phase} - ${entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000)}`;
 
     meta.append(name, detail);
 
@@ -119,7 +119,7 @@ export function renderRanking(entries, currentPlayer = "") {
     const inspectButton = document.createElement("button");
     inspectButton.type = "button";
     inspectButton.className = "ranking-open";
-    inspectButton.setAttribute("aria-label", `Ver coleção de ${entry.name}`);
+    inspectButton.setAttribute("aria-label", `Ver colecao de ${entry.name}`);
     inspectButton.textContent = "+";
 
     if (typeof rankingInspectHandler === "function") {
@@ -169,12 +169,14 @@ function getCollectionPriority(variant = "") {
     ghost: 0,
     angel: 1,
     skull: 2,
-    panda: 3,
-    star: 4,
-    bandana: 5,
-    bow: 6,
-    patch: 7,
-    classic: 8,
+    big: 3,
+    kangaroo: 4,
+    panda: 5,
+    star: 6,
+    bandana: 7,
+    bow: 8,
+    patch: 9,
+    classic: 10,
   };
 
   return priorities[variant] ?? 99;
@@ -185,6 +187,8 @@ export function getRarityInfo(variant = "") {
     ghost: { label: "Mitico", tone: "legendary" },
     angel: { label: "Lendario", tone: "legendary" },
     skull: { label: "Perigoso", tone: "danger" },
+    big: { label: "Raro", tone: "rare" },
+    kangaroo: { label: "Especial", tone: "special" },
     panda: { label: "Raro", tone: "rare" },
     star: { label: "Especial", tone: "special" },
     bandana: { label: "Especial", tone: "special" },
@@ -262,7 +266,7 @@ function createCollectionItem(group, options = {}) {
 
   const detail = document.createElement("span");
   detail.textContent = group.count > 1
-    ? `${group.count} capturas · ${group.totalPoints} pontos`
+    ? `${group.count} capturas - ${group.totalPoints} pontos`
     : group.detail;
 
   if (rarity.tone !== "common") {
@@ -703,8 +707,8 @@ export function closeHelp() {
 }
 
 export function openRankingDetail(entry, groupedCollection) {
-  rankingDetailTitleEl.textContent = `Coleção de ${entry.name}`;
-  rankingDetailMetaEl.textContent = `${entry.phase ? `Fase ${entry.phase}` : ""} · ${entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000)} · ${entry.points} pts`;
+  rankingDetailTitleEl.textContent = `Colecao de ${entry.name}`;
+  rankingDetailMetaEl.textContent = `${entry.phase ? `Fase ${entry.phase}` : ""} - ${entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000)} - ${entry.points} pts`;
   rankingDetailListEl.textContent = "";
 
   if (!groupedCollection.length) {
@@ -730,3 +734,5 @@ export function closeRankingDetail() {
 export function groupCollectionForDisplay(collection = []) {
   return groupCollectionByType(collection);
 }
+
+
