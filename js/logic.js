@@ -1293,7 +1293,10 @@ export function updateGame(state, claw, deltaMs) {
     moveClaw(claw, state.moveDirection, slowFactor * deltaFactor, state.touchTargetX, state.touchControlActive);
   }
 
-  const specialAlwaysMoves = state.specialPlush?.variant === "angel" || state.specialPlush?.variant === "skull";
+  const specialAlwaysMoves =
+    state.specialPlush?.variant === "angel" ||
+    state.specialPlush?.variant === "skull" ||
+    state.specialPlush?.variant === "ghost";
   if (!claw.dropping && !claw.returning && !claw.carrying && !phase.clearMachine && (phase.plushSpeed > 0 || specialAlwaysMoves)) {
     [...activePlushes, state.specialPlush].filter(Boolean).forEach((plush) => {
       if (plush.variant === "ghost") {
