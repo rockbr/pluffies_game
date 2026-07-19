@@ -408,7 +408,7 @@ function createSpecialPlush(state, phase, mainPlushes, bonusRound) {
     radius: variant === "big"
       ? Math.max(60, phase.plushRadius * 1.74)
       : variant === "kangaroo"
-        ? Math.max(44, phase.plushRadius * 1.34)
+        ? Math.max(38, phase.plushRadius * 1.18)
         : Math.max(24, phase.plushRadius * (bonusRound ? 0.78 : 0.88)),
     color: variant === "angel"
       ? "#fff0d9"
