@@ -48,6 +48,10 @@ const claw = createInitialClaw();
 const RANKING_STORAGE_KEY = "plush-claw-ranking-v1";
 const SOUND_STORAGE_KEY = "plush-claw-sound-muted-v1";
 const GAME_STATE_STORAGE_KEY = "plush-claw-progress-v1";
+const queryParams = new URLSearchParams(window.location.search);
+const embeddedMode = queryParams.get("embedded") === "1";
+const platformPlayerName = (queryParams.get("player") ?? "").trim().slice(0, 14);
+const startLabelEl = document.querySelector(".start-label");
 let rankingEntries = loadRanking();
 let audioContext = null;
 let lastPersistAt = 0;
@@ -68,6 +72,18 @@ function syncSoundButton() {
 
 function syncPauseButton() {
   pauseToggleButton.textContent = state.paused ? "Continuar" : "Pausar";
+}
+
+function syncEmbeddedStartScreen() {
+  if (!embeddedMode) {
+    return;
+  }
+
+  playerNameInputEl.value = platformPlayerName || "jogador";
+  playerNameInputEl.readOnly = true;
+  playerNameInputEl.setAttribute("aria-readonly", "true");
+  playerNameInputEl.classList.add("start-input-locked");
+  startLabelEl.textContent = "Jogador da plataforma";
 }
 
 function togglePause(forceValue) {
@@ -183,6 +199,31 @@ function loadRanking() {
   }
 }
 
+function notifyPlatformMatchComplete(result = "concluido") {
+  if (!embeddedMode || state.platformResultSent || !state.hasStarted) {
+    return;
+  }
+
+  state.platformResultSent = true;
+  const payload = {
+    pontuacao: state.points,
+    duracaoSegundos: Math.max(1, Math.floor((state.runTimeMs ?? 0) / 1000)),
+    resultado: result,
+  };
+
+  if (window.MyGaming?.finalizarPartida) {
+    window.MyGaming.finalizarPartida(payload);
+    return;
+  }
+
+  window.parent.postMessage({
+    tipo: "finalizarPartida",
+    payload,
+    correlationId: crypto.randomUUID(),
+    versao: "1.0",
+  }, "*");
+}
+
 function saveRanking() {
   window.localStorage.setItem(RANKING_STORAGE_KEY, JSON.stringify(rankingEntries));
 }
@@ -277,6 +318,10 @@ function saveGameProgress(force = false) {
 }
 
 function restoreGameProgress() {
+  if (embeddedMode) {
+    return false;
+  }
+
   try {
     const raw = window.localStorage.getItem(GAME_STATE_STORAGE_KEY);
     if (!raw) {
@@ -365,11 +410,12 @@ function registerRankingEntry() {
   saveRanking();
   renderRanking(rankingEntries, state.playerName);
   state.scoreSaved = true;
+  notifyPlatformMatchComplete(state.phaseIndex >= phases.length - 1 ? "vitoria" : "concluido");
 }
 
 function startGame() {
   ensureAudioContext();
-  const rawName = playerNameInputEl.value.trim();
+  const rawName = embeddedMode ? (platformPlayerName || "jogador") : playerNameInputEl.value.trim();
   if (!rawName) {
     playerNameInputEl.classList.add("start-input-error");
     playerNameInputEl.focus();
@@ -381,6 +427,7 @@ function startGame() {
   state.playerName = rawName.slice(0, 14);
   state.hasStarted = true;
   state.scoreSaved = false;
+  state.platformResultSent = false;
   startOverlayEl.hidden = true;
   state.paused = false;
   state.runTimeMs = 0;
@@ -394,9 +441,14 @@ function startGame() {
 }
 
 function logoutPlayer() {
+  if (embeddedMode && state.hasStarted && !state.platformResultSent) {
+    notifyPlatformMatchComplete("encerrado");
+  }
+
   state.hasStarted = false;
   state.playerName = "";
   state.scoreSaved = false;
+  state.platformResultSent = false;
   state.paused = false;
   state.points = 0;
   state.continues = 0;
@@ -428,10 +480,17 @@ function logoutPlayer() {
   startOverlayEl.hidden = false;
   syncSignedOutUI();
   playerNameInputEl.value = "";
-  playerNameInputEl.focus();
-  setMessage("Digite o nome do jogador e aperte Start.");
+  if (!embeddedMode) {
+    playerNameInputEl.focus();
+  }
+  setMessage(embeddedMode ? "Aperte Start para jogar." : "Digite o nome do jogador e aperte Start.");
   syncPauseButton();
   window.localStorage.removeItem(GAME_STATE_STORAGE_KEY);
+
+  if (embeddedMode) {
+    syncEmbeddedStartScreen();
+    playerNameInputEl.blur();
+  }
 }
 
 const keyState = {
@@ -753,5 +812,9 @@ if (!restoreGameProgress()) {
   renderCollection(state);
   renderRanking(rankingEntries, state.playerName);
   syncSignedOutUI();
+  if (embeddedMode) {
+    syncEmbeddedStartScreen();
+    setMessage("Aperte Start para jogar.");
+  }
 }
 requestAnimationFrame(frame);
