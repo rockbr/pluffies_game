@@ -948,6 +948,143 @@ function drawFeedbackOverlay(feedbackOverlay) {
   ctx.restore();
 }
 
+function drawComboExtraFlash(comboExtraFlash) {
+  const layout = getLayout();
+  const progress = Math.max(0, Math.min(1, comboExtraFlash.timer / comboExtraFlash.maxTimer));
+  const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.018);
+  const alpha = progress > 0.55 ? 1 : progress / 0.55;
+  const width = 244;
+  const height = 84;
+  const x = layout.glassX + (layout.glassWidth - width) / 2;
+  const y = layout.glassY + 264;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const glow = ctx.createRadialGradient(
+    x + width / 2,
+    y + height / 2,
+    20,
+    x + width / 2,
+    y + height / 2,
+    170,
+  );
+  glow.addColorStop(0, `rgba(255,216,77,${0.2 + pulse * 0.16})`);
+  glow.addColorStop(0.6, "rgba(255,136,64,0.14)");
+  glow.addColorStop(1, "rgba(255,136,64,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(layout.glassX + 14, y - 26, layout.glassWidth - 28, height + 52);
+
+  ctx.fillStyle = `rgba(22, 15, 8, ${0.82 + pulse * 0.08})`;
+  roundRect(x, y, width, height, 18);
+  ctx.strokeStyle = `rgba(255, 216, 77, ${0.76 + pulse * 0.18})`;
+  ctx.lineWidth = 2.6;
+  strokeRoundRect(x, y, width, height, 18);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff6d6";
+  ctx.font = "900 28px Trebuchet MS";
+  ctx.fillText("PONTO EXTRA!", x + width / 2, y + 28);
+  ctx.font = "900 20px Trebuchet MS";
+  ctx.fillText(
+    `${comboExtraFlash.count}x NA GARRA  +${comboExtraFlash.points}`,
+    x + width / 2,
+    y + 56,
+  );
+
+  ctx.restore();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
+function drawMashPromptRadar(state, claw) {
+  if (!claw.carrying || !claw.returning || state.bigBearMashRemaining <= 0) {
+    return;
+  }
+
+  const layout = getLayout();
+  const carriedPlushes = state.carriedPlushes?.length ? state.carriedPlushes : [state.plush].filter(Boolean);
+  const bigCount = carriedPlushes.filter((plush) => plush?.variant === "big").length;
+  const comboCount = Math.max(0, carriedPlushes.length - 1);
+  const hasBig = bigCount > 0;
+  const hasCombo = comboCount > 0;
+  const profile = hasBig && hasCombo
+    ? {
+      ring: "255, 92, 92",
+      sweep: "255, 92, 92",
+      glow: "255, 76, 76",
+      text: "255, 245, 214",
+      label: "COMBO BIG",
+      intensity: 1.3,
+    }
+    : hasBig
+      ? {
+        ring: "255, 92, 92",
+        sweep: "255, 92, 92",
+        glow: "255, 76, 76",
+        text: "255, 244, 224",
+        label: "BIG",
+        intensity: 1.12,
+      }
+      : {
+        ring: "255, 92, 92",
+        sweep: "255, 92, 92",
+        glow: "255, 76, 76",
+        text: "236, 250, 255",
+        label: carriedPlushes.length >= 3 ? "TRIPLO" : "DUPLO",
+        intensity: 1.08,
+      };
+  const pulse = 0.5 + 0.5 * Math.sin(performance.now() * (0.012 * profile.intensity));
+  const hardPulse = 0.5 + 0.5 * Math.sin(performance.now() * (0.022 * profile.intensity));
+  const clawSignalY = claw.y + claw.armHeight + 92;
+  const textAlpha = 0.72 + pulse * 0.16;
+  const bannerWidth = 164;
+  const bannerHeight = 44;
+  const bannerX = layout.glassX + (layout.glassWidth - bannerWidth) / 2;
+  const bannerY = layout.glassY + 26;
+
+  ctx.save();
+  ctx.fillStyle = `rgba(9, 16, 25, ${0.54 + hardPulse * 0.08})`;
+  roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 12);
+  ctx.strokeStyle = `rgba(${profile.sweep}, ${0.54 + pulse * 0.12})`;
+  ctx.lineWidth = 2;
+  strokeRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 12);
+
+  ctx.fillStyle = `rgba(${profile.text}, ${0.9})`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "900 16px Trebuchet MS";
+  ctx.fillText("APERTE PEGAR", bannerX + bannerWidth / 2, bannerY + 15);
+  ctx.font = "900 12px Trebuchet MS";
+  ctx.fillText(profile.label, bannerX + bannerWidth / 2, bannerY + 31);
+
+  const clawGlow = ctx.createRadialGradient(claw.x, clawSignalY, 10, claw.x, clawSignalY, 72 + pulse * 16);
+  clawGlow.addColorStop(0, `rgba(${profile.glow}, ${0.42 + pulse * 0.2})`);
+  clawGlow.addColorStop(0.42, `rgba(${profile.ring}, ${0.24 + hardPulse * 0.18})`);
+  clawGlow.addColorStop(1, `rgba(${profile.ring}, 0)`);
+  ctx.fillStyle = clawGlow;
+  ctx.beginPath();
+  ctx.arc(claw.x, clawSignalY, 72 + pulse * 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(${profile.sweep}, ${0.72 + pulse * 0.18})`;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(claw.x, clawSignalY, 30 + pulse * 12, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(255, 64, 64, ${0.58 + hardPulse * 0.24})`;
+  ctx.lineWidth = 3.2;
+  ctx.beginPath();
+  ctx.arc(claw.x, clawSignalY, 60 + pulse * 14, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
 function drawGameOverOverlay(state) {
   const layout = getLayout();
   const button = getGameOverTarget();
@@ -1592,11 +1729,15 @@ export function drawGame(state, claw) {
     ?? state.plush
     ?? { x: claw.x, y: claw.y, radius: 0 };
   drawClaw(claw, focusPlush);
+  drawMashPromptRadar(state, claw);
   if (state.feedbackPulse) {
     drawFeedbackPulse(state.feedbackPulse);
   }
   if (state.presentFlash) {
     drawPresentFlash(state.presentFlash);
+  }
+  if (state.comboExtraFlash) {
+    drawComboExtraFlash(state.comboExtraFlash);
   }
   if (state.gameOver) {
     drawGameOverOverlay(state);

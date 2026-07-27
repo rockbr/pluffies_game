@@ -7,14 +7,42 @@
   "versao": "1.0.0",
   "arquivo_inicial": "index.html",
   "icone": "icone.svg",
-  "capa": "capa.svg",
+  "capa": "capa.png",
   "orientacao": "retrato",
   "largura_recomendada": 720,
   "altura_recomendada": 1280,
   "idade_minima": 6,
   "categoria": "arcade",
   "sdk": {
-    "versao": "1.0.0"
+    "versao": "1.2.0"
+  },
+  "integracao": {
+    "plataforma": "my-gaming",
+    "modo": "iframe",
+    "handshake": {
+      "obrigatorio": true,
+      "solicitacao": "handshakeJogo",
+      "sucesso": "handshakePlataformaOk",
+      "erro": "handshakePlataformaErro"
+    },
+    "sessao": {
+      "embedded_param": "embedded",
+      "player_param": "player",
+      "token_param": "sessionToken",
+      "parent_origin_param": "parentOrigin",
+      "token_obrigatorio_para_resultado_oficial": true
+    },
+    "origem": {
+      "usar_parent_origin_exato": true,
+      "bloquear_post_message_com_asterisco": true
+    },
+    "eventos_oficiais": [
+      "registrarEvento",
+      "atualizarPontuacao",
+      "salvarProgresso",
+      "carregarProgresso",
+      "finalizarPartida"
+    ]
   },
   "ranking": {
     "tipo": "maior_pontuacao",

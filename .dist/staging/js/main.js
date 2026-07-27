@@ -58,6 +58,7 @@ const GAME_STATE_STORAGE_KEY = "plush-claw-progress-v1";
 const queryParams = new URLSearchParams(window.location.search);
 const embeddedMode = queryParams.get("embedded") === "1";
 const platformPlayerName = (queryParams.get("player") ?? "").trim().slice(0, 14);
+const platformSessionToken = (queryParams.get("sessionToken") ?? "").trim();
 const startLabelEl = document.querySelector(".start-label");
 let rankingEntries = embeddedMode ? [] : loadRanking();
 let audioContext = null;
@@ -93,6 +94,12 @@ function syncEmbeddedStartScreen() {
   playerNameInputEl.setAttribute("aria-readonly", "true");
   playerNameInputEl.classList.add("start-input-locked");
   startLabelEl.textContent = "Jogador da plataforma";
+
+  if (!platformSessionToken) {
+    setMessage("Sessão da plataforma ausente. O jogo abre, mas o resultado oficial fica bloqueado.");
+  } else if (window.MyGaming && !window.MyGaming.isSessionValidated()) {
+    setMessage("Validando sessão da plataforma...");
+  }
 }
 
 function syncEmbeddedRankingUI() {
@@ -235,24 +242,34 @@ function notifyPlatformMatchComplete(result = "concluido") {
     return;
   }
 
-  state.platformResultSent = true;
   const payload = {
+    sessionToken: platformSessionToken,
+    jogador: state.playerName,
+    faseAtual: state.phaseIndex + 1,
+    fasesTotais: phases.length,
+    continuesRestantes: state.continues,
+    tentativasRestantes: state.tries,
+    ursoCapturados: state.collection.length,
     pontuacao: state.points,
     duracaoSegundos: Math.max(1, Math.floor((state.runTimeMs ?? 0) / 1000)),
     resultado: result,
   };
 
-  if (window.MyGaming?.finalizarPartida) {
-    window.MyGaming.finalizarPartida(payload);
+  if (window.MyGaming?.finalizarPartida?.(payload)) {
+    state.platformResultSent = true;
     return;
   }
 
-  window.parent.postMessage({
-    tipo: "finalizarPartida",
-    payload,
-    correlationId: crypto.randomUUID(),
-    versao: "1.0",
-  }, "*");
+  const status = window.MyGaming?.getSessionStatus?.() ?? "indisponivel";
+  setMessage(
+    status === "missing_token"
+      ? "Sessão da plataforma ausente. Resultado oficial não enviado."
+      : status === "pending"
+        ? "Sessão da plataforma ainda não validada. Resultado oficial não enviado."
+        : status === "rejected"
+          ? "Sessão da plataforma rejeitada. Resultado oficial não enviado."
+          : "Integração da plataforma indisponível. Resultado oficial não enviado.",
+  );
 }
 
 function saveRanking() {
@@ -443,17 +460,6 @@ function decorateRankingSummary() {
   if (rankingCountEl) {
     rankingCountEl.textContent = rankingEntries.length > 3 ? `Top 3 de ${rankingEntries.length}` : "Top 3";
   }
-
-  const rows = [...rankingListEl.querySelectorAll(".ranking-item")];
-  rows.forEach((row, index) => {
-    const entry = rankingEntries[index];
-    const detailEl = row.querySelector(".ranking-detail");
-    if (!entry || !detailEl) {
-      return;
-    }
-
-    detailEl.textContent = `F${entry.phase} - ${entry.timeLabel} - ${entry.caughtCount} urso${entry.caughtCount === 1 ? "" : "s"}`;
-  });
 }
 
 function renderFullRankingModal() {
