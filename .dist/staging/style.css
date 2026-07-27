@@ -1005,10 +1005,6 @@ p {
   line-height: 1.55;
 }
 
-#ranking-detail-meta {
-  white-space: nowrap;
-}
-
 @media (max-width: 900px) {
   body {
     overflow-y: auto;

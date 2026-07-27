@@ -1,0 +1,30 @@
+{
+  "formato": "my-gaming",
+  "versao_formato": "1.0",
+  "identificador": "pluffies-game",
+  "nome": "Pluffies",
+  "descricao": "Controle a garra, capture pelucias especiais e suba no ranking da maquina arcade.",
+  "versao": "1.0.0",
+  "arquivo_inicial": "index.html",
+  "icone": "icone.svg",
+  "capa": "capa.svg",
+  "orientacao": "retrato",
+  "largura_recomendada": 720,
+  "altura_recomendada": 1280,
+  "idade_minima": 6,
+  "categoria": "arcade",
+  "sdk": {
+    "versao": "1.0.0"
+  },
+  "ranking": {
+    "tipo": "maior_pontuacao",
+    "ordem": "decrescente",
+    "permite_empate": true,
+    "quantidade_resultados_considerados": 1
+  },
+  "permissoes": [
+    "armazenamento_local",
+    "audio",
+    "tela_cheia"
+  ]
+}

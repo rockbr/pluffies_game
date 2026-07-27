@@ -106,7 +106,12 @@ export function renderRanking(entries, currentPlayer = "") {
     const name = document.createElement("span");
     name.className = "ranking-name";
     name.textContent = entry.name;
-    meta.append(name);
+
+    const detail = document.createElement("span");
+    detail.className = "ranking-detail";
+    detail.textContent = `F${entry.phase} - ${entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000)}`;
+
+    meta.append(name, detail);
 
     const score = document.createElement("span");
     score.className = "ranking-score";
@@ -704,18 +709,7 @@ export function closeHelp() {
 
 export function openRankingDetail(entry, groupedCollection) {
   rankingDetailTitleEl.textContent = `Coleção de ${entry.name}`;
-  const caughtCount = entry.caughtCount ?? groupedCollection.length;
-  const timeLabel = entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000);
-  const metaParts = [];
-
-  if (entry.phase) {
-    metaParts.push(`Fase ${entry.phase}`);
-  }
-
-  metaParts.push(`Tempo ${timeLabel}`);
-  metaParts.push(`Ursos ${caughtCount}`);
-  metaParts.push(`Pontos ${entry.points}`);
-  rankingDetailMetaEl.textContent = metaParts.join(" - ");
+  rankingDetailMetaEl.textContent = `${entry.phase ? `Fase ${entry.phase}` : ""} - ${entry.timeLabel ?? formatElapsedTime((entry.durationSec ?? 0) * 1000)} - ${entry.points} pts`;
   rankingDetailListEl.textContent = "";
 
   if (!groupedCollection.length) {

@@ -1,4 +1,4 @@
-import { createInitialClaw, FINAL_PHASE_ID, machine, phases, TOTAL_PHASES } from "./config.js";
+import { createInitialClaw, machine, phases } from "./config.js";
 import { triesLeftEl } from "./dom.js";
 import { randomRange } from "./utils.js";
 import { renderCollection, setMessage, syncUI } from "./ui.js";
@@ -109,14 +109,6 @@ function getPointMultiplier(variant = "") {
   return 1;
 }
 
-function getComboExtraPoints(phasePoints, caughtCount) {
-  if (caughtCount <= 1) {
-    return 0;
-  }
-
-  return phasePoints * caughtCount;
-}
-
 function getThemeChance(phaseId) {
   if (phaseId >= 80) return 0.34;
   if (phaseId >= 40) return 0.26;
@@ -224,7 +216,6 @@ function resetRound(state, claw, options = {}) {
     ? state.present
     : createPresent(state, phase, state.plushes, state.bonusRound);
   state.presentFlash = null;
-  state.comboExtraFlash = null;
   state.feedbackPulse = null;
   state.feedbackOverlay = null;
 
@@ -266,7 +257,7 @@ function ensureSpecialAssignment(state, phaseId) {
   }
 
   const start = windowIndex * 10 + 1;
-  const end = Math.min(TOTAL_PHASES, start + 9);
+  const end = Math.min(100, start + 9);
   const phaseIds = Array.from({ length: end - start + 1 }, (_, index) => start + index);
   const skullPhase = phaseIds[Math.floor(Math.random() * phaseIds.length)];
   const angelCandidates = phaseIds.filter((id) => id !== skullPhase);
@@ -304,7 +295,7 @@ function ensureGhostAssignment(state, phaseId) {
   }
 
   const start = windowIndex * 20 + 1;
-  const end = Math.min(TOTAL_PHASES, start + 19);
+  const end = Math.min(100, start + 19);
   const candidateIds = [];
 
   for (let id = start; id <= end; id += 1) {
@@ -514,15 +505,6 @@ function triggerPresentFlash(state, presentType, message, title = "PREMIO!") {
     title,
     message,
     timer: 1150,
-  };
-}
-
-function triggerComboExtraFlash(state, caughtCount, comboExtraPoints) {
-  state.comboExtraFlash = {
-    count: caughtCount,
-    points: comboExtraPoints,
-    timer: 1320,
-    maxTimer: 1320,
   };
 }
 
@@ -885,12 +867,10 @@ function handleWin(state, claw) {
   const exitTarget = getPrizeExitTarget();
   const targetCaptures = getRoundTargetCaptures(state, phase);
   const caughtPlushes = state.carriedPlushes?.length ? state.carriedPlushes : [state.plush].filter(Boolean);
-  const basePointsAward = caughtPlushes.reduce(
+  const pointsAward = caughtPlushes.reduce(
     (total, plush) => total + phase.points * getPointMultiplier(plush.variant),
     0,
   );
-  const comboExtraPoints = getComboExtraPoints(phase.points, caughtPlushes.length);
-  const pointsAward = basePointsAward + comboExtraPoints;
   state.points += pointsAward;
   if (state.bonusRound) {
     state.bonusRoundScore += pointsAward;
@@ -949,27 +929,12 @@ function handleWin(state, claw) {
   }
 
   let bonusMessage = "";
-  if (comboExtraPoints > 0) {
-    bonusMessage += ` Ponto extra: +${comboExtraPoints}.`;
-    queueSound(state, "bonus");
-    triggerComboExtraFlash(state, caughtPlushes.length, comboExtraPoints);
-    triggerVisualFeedback(state, {
-      x: machine.x + machine.width / 2,
-      y: machine.y + 248,
-      color: "#ffd84d",
-      label: `EXTRA +${comboExtraPoints}`,
-      pulseTimer: 820,
-      overlayTimer: 260,
-      shake: 9,
-    });
-  }
-
   if (state.bonusRound && state.phaseCatchCount >= targetCaptures) {
     if (!state.bonusRoundFailed) {
       const bonusExtra = state.bonusRoundScore * (state.bonusRound.multiplier - 1);
       if (bonusExtra > 0) {
         state.points += bonusExtra;
-        bonusMessage += ` Bonus x${state.bonusRound.multiplier}: +${bonusExtra} pontos.`;
+        bonusMessage = ` Bonus x${state.bonusRound.multiplier}: +${bonusExtra} pontos.`;
         queueSound(state, "bonus");
         triggerPresentFlash(
           state,
@@ -1009,12 +974,12 @@ function handleWin(state, claw) {
   const leadPlush = caughtPlushes[0];
   if (leadPlush?.variant === "angel") {
     triggerPresentFlash(state, "angel", `LENDARIO +${pointsAward} PONTOS`, "URSO ANJO!");
-    setMessage(`Urso anjo pego com ${caughtPlushes.length} urso(s). ${pointsAward} pontos.${comboExtraPoints > 0 ? ` Bonus combo +${comboExtraPoints}.` : ""} ${state.phaseCatchCount}/${targetCaptures} capturas.${bonusMessage}`);
+    setMessage(`Urso anjo pego com ${caughtPlushes.length} urso(s). ${pointsAward} pontos. ${state.phaseCatchCount}/${targetCaptures} capturas.${bonusMessage}`);
   } else if (leadPlush?.variant === "ghost") {
     triggerPresentFlash(state, "ghost", `FANTASMA +${pointsAward}`, "URSO FANTASMA!");
-    setMessage(`Urso fantasma pego com ${caughtPlushes.length} urso(s). ${pointsAward} pontos.${comboExtraPoints > 0 ? ` Bonus combo +${comboExtraPoints}.` : ""} ${state.phaseCatchCount}/${targetCaptures} capturas.${bonusMessage}`);
+    setMessage(`Urso fantasma pego com ${caughtPlushes.length} urso(s). ${pointsAward} pontos. ${state.phaseCatchCount}/${targetCaptures} capturas.${bonusMessage}`);
   } else {
-    setMessage(`Boa. ${caughtPlushes.length} urso(s), ${pointsAward} pontos.${comboExtraPoints > 0 ? ` Ponto extra +${comboExtraPoints}.` : ""} ${state.phaseCatchCount}/${targetCaptures} capturas.${bonusMessage}`);
+    setMessage(`Boa. ${caughtPlushes.length} urso(s), ${pointsAward} pontos. ${state.phaseCatchCount}/${targetCaptures} capturas.${bonusMessage}`);
   }
 }
 
@@ -1302,13 +1267,6 @@ export function updateGame(state, claw, deltaMs) {
     }
   }
 
-  if (state.comboExtraFlash) {
-    state.comboExtraFlash.timer = Math.max(0, state.comboExtraFlash.timer - deltaMs);
-    if (state.comboExtraFlash.timer === 0) {
-      state.comboExtraFlash = null;
-    }
-  }
-
   if (state.feedbackPulse) {
     state.feedbackPulse.timer = Math.max(0, state.feedbackPulse.timer - deltaMs);
     if (state.feedbackPulse.timer === 0) {
@@ -1510,7 +1468,7 @@ export function updateGame(state, claw, deltaMs) {
           setMessage(`Fase concluida. Indo para ${phases[state.phaseIndex].name}.`);
         } else {
           resetPhase(state, claw, false);
-          setMessage(`Fase ${FINAL_PHASE_ID} concluida. Reiniciando o desafio final.`);
+          setMessage("Fase 100 concluida. Reiniciando o desafio final.");
         }
       } else {
         if (state.bonusRound) {

@@ -443,6 +443,17 @@ function decorateRankingSummary() {
   if (rankingCountEl) {
     rankingCountEl.textContent = rankingEntries.length > 3 ? `Top 3 de ${rankingEntries.length}` : "Top 3";
   }
+
+  const rows = [...rankingListEl.querySelectorAll(".ranking-item")];
+  rows.forEach((row, index) => {
+    const entry = rankingEntries[index];
+    const detailEl = row.querySelector(".ranking-detail");
+    if (!entry || !detailEl) {
+      return;
+    }
+
+    detailEl.textContent = `F${entry.phase} - ${entry.timeLabel} - ${entry.caughtCount} urso${entry.caughtCount === 1 ? "" : "s"}`;
+  });
 }
 
 function renderFullRankingModal() {
