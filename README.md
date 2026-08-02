@@ -2,16 +2,20 @@
 
 Jogo HTML5 preparado para envio em ZIP para a plataforma My Gaming.
 
+## Descricao do jogo
+
+Pluffies e um jogo de garra em estilo arcade. O jogador move a garra para capturar ursos de pelucia, marcar pontos e avancar antes que o tempo acabe. As fases aumentam a dificuldade com mais velocidade, precisao e personagens especiais, como urso anjo, caveira, fantasma e BIG Urso. Os controles usam `A` e `D` ou as setas para mover, e `Espaco` ou seta para baixo para soltar a garra.
+
 ## Estrutura principal
 
 - `manifesto.json`: contrato de integracao e metadados do jogo
 - `index.html`: entrada principal
-- `scripts/sdk-jogos.js`: bridge com a My Gaming
-- `scripts/jogo.js`: bootstrap do runtime
-- `js/`: logica principal
-- `estilos/`: folha de estilo do jogo
-- `build-package.ps1`: monta o ZIP no formato aceito
-- `publish-my-gaming.ps1`: gera o artefato final versionado para upload manual
+- `assets/`: icones, favicon e capa
+- `src/scripts/`: bootstrap e integracao com a My Gaming
+- `src/js/`: logica principal
+- `src/styles/`: folha de estilo do jogo
+- `tools/build-package.ps1`: monta o ZIP no formato aceito
+- `tools/publish-my-gaming.ps1`: gera o artefato final versionado para upload manual
 
 ## Regras de integracao
 
@@ -36,7 +40,7 @@ O pacote segue o contrato da My Gaming:
 ## Como gerar o ZIP
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\build-package.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\build-package.ps1
 ```
 
 O arquivo sera gerado em `.dist\pluffies-game-my-gaming.zip`.
@@ -44,7 +48,7 @@ O arquivo sera gerado em `.dist\pluffies-game-my-gaming.zip`.
 ## Como publicar para upload manual
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-my-gaming.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\publish-my-gaming.ps1
 ```
 
 O script gera:
@@ -55,7 +59,7 @@ O script gera:
 Tambem e possivel copiar o artefato para outra pasta:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-my-gaming.ps1 -DestinationDir "D:\Pacotes\MyGaming"
+powershell -ExecutionPolicy Bypass -File .\tools\publish-my-gaming.ps1 -DestinationDir "D:\Pacotes\MyGaming"
 ```
 
 ## Observacoes

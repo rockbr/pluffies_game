@@ -4,9 +4,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$toolsRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $toolsRoot
 $manifestPath = Join-Path $projectRoot "manifesto.json"
-$buildScriptPath = Join-Path $projectRoot "build-package.ps1"
+$buildScriptPath = Join-Path $toolsRoot "build-package.ps1"
 $distRoot = Join-Path $projectRoot ".dist"
 
 if (-not (Test-Path $manifestPath)) {

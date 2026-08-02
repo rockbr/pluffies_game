@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$toolsRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $toolsRoot
 $distRoot = Join-Path $projectRoot ".dist"
 $stagingRoot = Join-Path $distRoot "staging"
 $zipPath = Join-Path $distRoot $OutputName
@@ -18,8 +19,9 @@ $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
 
 $requiredPaths = @(
   "manifesto.json",
-  "scripts",
-  "estilos"
+  "src\scripts",
+  "src\styles",
+  "src\js"
 )
 
 $manifestReferencedFiles = @(
@@ -30,12 +32,8 @@ $manifestReferencedFiles = @(
 
 $packagePaths = @(
   "manifesto.json",
-  "favicon.svg",
-  "style.css",
-  "game.js",
-  "js",
-  "scripts",
-  "estilos"
+  "assets",
+  "src"
 ) + $manifestReferencedFiles | Select-Object -Unique
 
 foreach ($relativePath in $requiredPaths) {
@@ -142,6 +140,6 @@ Write-Host ""
 Write-Host "Conteudo validado para upload no My Gaming:"
 Write-Host "- manifesto.json na raiz"
 Write-Host "- arquivo inicial, icone e capa conforme manifesto"
-Write-Host "- pastas scripts/ e estilos/ incluidas"
+Write-Host "- pastas src/ e assets/ incluidas"
 Write-Host "- contrato de integracao conferido"
 Write-Host "- sem README.md ou arquivos fora do padrao"
