@@ -3,6 +3,7 @@ const queryParams = new URLSearchParams(window.location.search);
 const embedded = queryParams.get("embedded") === "1";
 const explicitParentOrigin = (queryParams.get("parentOrigin") ?? "").trim();
 const sessionToken = (queryParams.get("sessionToken") ?? "").trim();
+const fallbackPlayerName = (queryParams.get("player") ?? "").trim().slice(0, 14);
 const parentOrigin = resolveParentOrigin();
 
 const integrationState = {
@@ -10,6 +11,7 @@ const integrationState = {
   handshakeConfirmed: false,
   handshakeRejected: false,
   lastError: "",
+  playerName: fallbackPlayerName,
 };
 
 function resolveParentOrigin() {
@@ -53,12 +55,15 @@ function refreshMeta() {
     embedded,
     parentOrigin,
     hasSessionToken: Boolean(sessionToken),
+    playerName: integrationState.playerName,
     sessionStatus: getSessionStatus(),
     handshakeRequested: integrationState.handshakeRequested,
     handshakeConfirmed: integrationState.handshakeConfirmed,
     handshakeRejected: integrationState.handshakeRejected,
     lastError: integrationState.lastError,
   };
+
+  window.dispatchEvent(new CustomEvent("mygaming:session-meta", { detail: window.MyGaming.meta }));
 }
 
 function normalizePayload(payload) {
@@ -132,6 +137,10 @@ window.addEventListener("message", (event) => {
 
   const data = event.data ?? {};
   if (data.tipo === "handshakePlataformaOk") {
+    const incomingNickname = String(data.payload?.playerNickname ?? "").trim().slice(0, 14);
+    if (incomingNickname) {
+      integrationState.playerName = incomingNickname;
+    }
     integrationState.handshakeConfirmed = true;
     integrationState.handshakeRejected = false;
     integrationState.lastError = "";
@@ -151,6 +160,7 @@ window.MyGaming = window.MyGaming ?? {};
 window.MyGaming.requestHandshake = requestHandshake;
 window.MyGaming.isSessionValidated = () => canSendOfficial();
 window.MyGaming.getSessionStatus = () => getSessionStatus();
+window.MyGaming.getPlayerName = () => integrationState.playerName || fallbackPlayerName || "";
 window.MyGaming.registrarEvento = (evento) => send("registrarEvento", evento);
 window.MyGaming.atualizarPontuacao = (payload) => send("atualizarPontuacao", payload);
 window.MyGaming.finalizarPartida = (payload) => send("finalizarPartida", payload);

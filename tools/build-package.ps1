@@ -17,6 +17,9 @@ if (-not (Test-Path $manifestPath)) {
 
 $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
 
+$rootIconName = "icone.svg"
+$rootCoverName = "capa.png"
+
 $requiredPaths = @(
   "manifesto.json",
   "src\scripts",
@@ -102,7 +105,7 @@ if (-not (Test-Path $distRoot)) {
 }
 
 if (Test-Path $stagingRoot) {
-  Remove-Item -LiteralPath $stagingRoot -Recurse -Force
+  [System.IO.Directory]::Delete($stagingRoot, $true)
 }
 
 if (Test-Path $zipPath) {
@@ -131,7 +134,25 @@ foreach ($relativePath in $packagePaths) {
   }
 }
 
+$iconSourcePath = Join-Path $projectRoot $manifest.icone
+$coverSourcePath = Join-Path $projectRoot $manifest.capa
+$rootIconPath = Join-Path $stagingRoot $rootIconName
+$rootCoverPath = Join-Path $stagingRoot $rootCoverName
+
+Copy-Item -LiteralPath $iconSourcePath -Destination $rootIconPath -Force
+Copy-Item -LiteralPath $coverSourcePath -Destination $rootCoverPath -Force
+
+$stagingManifestPath = Join-Path $stagingRoot "manifesto.json"
+$stagingManifest = Get-Content $stagingManifestPath -Raw | ConvertFrom-Json
+$stagingManifest.icone = $rootIconName
+$stagingManifest.capa = $rootCoverName
+$stagingManifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $stagingManifestPath -Encoding UTF8
+
 Compress-Archive -Path (Join-Path $stagingRoot "*") -DestinationPath $zipPath -CompressionLevel Optimal
+
+if (Test-Path $stagingRoot) {
+  Remove-Item -LiteralPath $stagingRoot -Recurse -Force
+}
 
 Write-Host ""
 Write-Host "Pacote gerado com sucesso:" -ForegroundColor Green
@@ -139,7 +160,7 @@ Write-Host $zipPath
 Write-Host ""
 Write-Host "Conteudo validado para upload no My Gaming:"
 Write-Host "- manifesto.json na raiz"
-Write-Host "- arquivo inicial, icone e capa conforme manifesto"
+Write-Host "- arquivo inicial, icone e capa na raiz do ZIP"
 Write-Host "- pastas src/ e assets/ incluidas"
 Write-Host "- contrato de integracao conferido"
 Write-Host "- sem README.md ou arquivos fora do padrao"

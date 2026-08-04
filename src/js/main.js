@@ -60,13 +60,54 @@ const embeddedMode = queryParams.get("embedded") === "1";
 const platformPlayerName = (queryParams.get("player") ?? "").trim().slice(0, 14);
 const platformSessionToken = (queryParams.get("sessionToken") ?? "").trim();
 const startLabelEl = document.querySelector(".start-label");
+const memoryStorage = new Map();
 let rankingEntries = embeddedMode ? [] : loadRanking();
 let audioContext = null;
 let lastPersistAt = 0;
 
-state.soundMuted = window.localStorage.getItem(SOUND_STORAGE_KEY) === "1";
-LEGACY_RANKING_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
-window.localStorage.removeItem(GAME_STATE_STORAGE_KEY);
+state.soundMuted = readStorage(SOUND_STORAGE_KEY) === "1";
+LEGACY_RANKING_STORAGE_KEYS.forEach(removeStorage);
+removeStorage(GAME_STATE_STORAGE_KEY);
+
+function resolveWebStorage() {
+  try {
+    const storage = window.localStorage;
+    const probeKey = "__pluffies_storage_probe__";
+    storage.setItem(probeKey, "1");
+    storage.removeItem(probeKey);
+    return storage;
+  } catch {
+    return null;
+  }
+}
+
+function readStorage(key) {
+  const storage = resolveWebStorage();
+  if (storage) {
+    return storage.getItem(key);
+  }
+
+  return memoryStorage.has(key) ? memoryStorage.get(key) : null;
+}
+
+function writeStorage(key, value) {
+  const storage = resolveWebStorage();
+  if (storage) {
+    storage.setItem(key, value);
+    return;
+  }
+
+  memoryStorage.set(key, value);
+}
+
+function removeStorage(key) {
+  const storage = resolveWebStorage();
+  if (storage) {
+    storage.removeItem(key);
+  }
+
+  memoryStorage.delete(key);
+}
 
 function syncSignedOutUI() {
   const signedIn = state.hasStarted;
@@ -84,12 +125,17 @@ function syncPauseButton() {
   pauseToggleButton.textContent = state.paused ? "Continuar" : "Pausar";
 }
 
+function resolveEmbeddedPlayerName() {
+  const sdkPlayerName = window.MyGaming?.getPlayerName?.();
+  return (sdkPlayerName || platformPlayerName || "jogador").trim().slice(0, 14);
+}
+
 function syncEmbeddedStartScreen() {
   if (!embeddedMode) {
     return;
   }
 
-  playerNameInputEl.value = platformPlayerName || "jogador";
+  playerNameInputEl.value = resolveEmbeddedPlayerName();
   playerNameInputEl.readOnly = true;
   playerNameInputEl.setAttribute("aria-readonly", "true");
   playerNameInputEl.classList.add("start-input-locked");
@@ -225,7 +271,7 @@ function flushSoundEvents() {
 
 function loadRanking() {
   try {
-    const raw = window.localStorage.getItem(RANKING_STORAGE_KEY);
+    const raw = readStorage(RANKING_STORAGE_KEY);
     if (!raw) {
       return [];
     }
@@ -277,7 +323,7 @@ function saveRanking() {
     return;
   }
 
-  window.localStorage.setItem(RANKING_STORAGE_KEY, JSON.stringify(rankingEntries));
+  writeStorage(RANKING_STORAGE_KEY, JSON.stringify(rankingEntries));
 }
 
 function getPersistedSnapshot() {
@@ -354,7 +400,7 @@ function getPersistedSnapshot() {
 
 function saveGameProgress(force = false) {
   if (!state.hasStarted) {
-    window.localStorage.removeItem(GAME_STATE_STORAGE_KEY);
+    removeStorage(GAME_STATE_STORAGE_KEY);
     return;
   }
 
@@ -367,7 +413,7 @@ function saveGameProgress(force = false) {
     return;
   }
 
-  window.localStorage.setItem(GAME_STATE_STORAGE_KEY, JSON.stringify(snapshot));
+  writeStorage(GAME_STATE_STORAGE_KEY, JSON.stringify(snapshot));
   lastPersistAt = performance.now();
 }
 
@@ -377,7 +423,7 @@ function restoreGameProgress() {
   }
 
   try {
-    const raw = window.localStorage.getItem(GAME_STATE_STORAGE_KEY);
+    const raw = readStorage(GAME_STATE_STORAGE_KEY);
     if (!raw) {
       return false;
     }
@@ -389,7 +435,7 @@ function restoreGameProgress() {
 
     Object.assign(state, snapshot.state);
     Object.assign(claw, snapshot.claw ?? {});
-    state.soundMuted = window.localStorage.getItem(SOUND_STORAGE_KEY) === "1";
+    state.soundMuted = readStorage(SOUND_STORAGE_KEY) === "1";
     state.soundEvents = [];
     state.feedbackPulse = null;
     state.feedbackOverlay = null;
@@ -567,7 +613,7 @@ function registerRankingEntry() {
 
 function startGame() {
   ensureAudioContext();
-  const rawName = embeddedMode ? (platformPlayerName || "jogador") : playerNameInputEl.value.trim();
+  const rawName = embeddedMode ? resolveEmbeddedPlayerName() : playerNameInputEl.value.trim();
   if (!rawName) {
     playerNameInputEl.classList.add("start-input-error");
     playerNameInputEl.focus();
@@ -640,7 +686,7 @@ function logoutPlayer() {
   }
   setMessage(embeddedMode ? "Aperte Start para jogar." : "Digite o nome do jogador e aperte Start.");
   syncPauseButton();
-  window.localStorage.removeItem(GAME_STATE_STORAGE_KEY);
+  removeStorage(GAME_STATE_STORAGE_KEY);
 
   if (embeddedMode) {
     syncEmbeddedStartScreen();
@@ -917,7 +963,7 @@ collectionOpenButton.addEventListener("click", openCollection);
 collectionCloseButton.addEventListener("click", closeCollection);
 soundToggleButton.addEventListener("click", () => {
   state.soundMuted = !state.soundMuted;
-  window.localStorage.setItem(SOUND_STORAGE_KEY, state.soundMuted ? "1" : "0");
+  writeStorage(SOUND_STORAGE_KEY, state.soundMuted ? "1" : "0");
   ensureAudioContext();
   syncSoundButton();
 });
@@ -955,6 +1001,14 @@ rankingPanel.addEventListener("click", (event) => {
 
 setRankingInspectHandler((entry) => {
   openRankingDetail(entry, groupCollectionForDisplay(entry.collection ?? []));
+});
+
+window.addEventListener("mygaming:session-meta", () => {
+  if (!embeddedMode || state.hasStarted) {
+    return;
+  }
+
+  syncEmbeddedStartScreen();
 });
 
 window.addEventListener("beforeunload", () => {
