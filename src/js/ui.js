@@ -118,7 +118,7 @@ export function renderRanking(entries, currentPlayer = "") {
     inspectButton.setAttribute("aria-label", `Ver coleção de ${entry.name}`);
     inspectButton.textContent = "+";
 
-    if (typeof rankingInspectHandler === "function") {
+    if (typeof rankingInspectHandler === "function" && !entry.official) {
       row.tabIndex = 0;
       row.setAttribute("role", "button");
       row.addEventListener("click", () => rankingInspectHandler(entry));
@@ -132,6 +132,9 @@ export function renderRanking(entries, currentPlayer = "") {
         event.stopPropagation();
         rankingInspectHandler(entry);
       });
+    } else {
+      inspectButton.hidden = true;
+      inspectButton.setAttribute("aria-hidden", "true");
     }
 
     row.append(place, meta, score, inspectButton);

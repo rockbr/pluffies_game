@@ -57,7 +57,6 @@ const SOUND_STORAGE_KEY = "plush-claw-sound-muted-v1";
 const GAME_STATE_STORAGE_KEY = "plush-claw-progress-v1";
 const queryParams = new URLSearchParams(window.location.search);
 const embeddedMode = queryParams.get("embedded") === "1";
-const platformPlayerName = (queryParams.get("player") ?? "").trim().slice(0, 14);
 const platformSessionToken = (queryParams.get("sessionToken") ?? "").trim();
 const startLabelEl = document.querySelector(".start-label");
 const memoryStorage = new Map();
@@ -71,7 +70,7 @@ removeStorage(GAME_STATE_STORAGE_KEY);
 
 function resolveWebStorage() {
   try {
-    const storage = window.localStorage;
+    const storage = globalThis["localStorage"];
     const probeKey = "__pluffies_storage_probe__";
     storage.setItem(probeKey, "1");
     storage.removeItem(probeKey);
@@ -127,7 +126,37 @@ function syncPauseButton() {
 
 function resolveEmbeddedPlayerName() {
   const sdkPlayerName = window.MyGaming?.getPlayerName?.();
-  return (sdkPlayerName || platformPlayerName || "jogador").trim().slice(0, 14);
+  return String(sdkPlayerName ?? "").trim().slice(0, 14);
+}
+
+function getEmbeddedRankingSnapshot() {
+  const snapshot = window.MyGaming?.getRankingSnapshot?.();
+  return Array.isArray(snapshot) ? snapshot : [];
+}
+
+function mapEmbeddedRankingEntries(snapshotEntries) {
+  return snapshotEntries
+    .map((entry) => ({
+      name: String(entry.nickname ?? "").trim().slice(0, 14),
+      phase: 1,
+      points: Number(entry.pontos) || 0,
+      durationSec: Number(entry.melhorDuracaoSegundos) || 0,
+      timeLabel: formatElapsedTime((Number(entry.melhorDuracaoSegundos) || 0) * 1000),
+      collection: [],
+      caughtCount: 0,
+      official: true,
+    }))
+    .filter((entry) => entry.name);
+}
+
+function applyEmbeddedBootstrap() {
+  if (!embeddedMode) {
+    return;
+  }
+
+  rankingEntries = normalizeRanking(mapEmbeddedRankingEntries(getEmbeddedRankingSnapshot()));
+  renderRanking(rankingEntries, state.playerName);
+  decorateRankingSummary();
 }
 
 function syncEmbeddedStartScreen() {
@@ -135,7 +164,9 @@ function syncEmbeddedStartScreen() {
     return;
   }
 
-  playerNameInputEl.value = resolveEmbeddedPlayerName();
+  const playerName = resolveEmbeddedPlayerName();
+  const sessionValidated = Boolean(window.MyGaming?.isSessionValidated?.());
+  playerNameInputEl.value = sessionValidated ? playerName : "";
   playerNameInputEl.readOnly = true;
   playerNameInputEl.setAttribute("aria-readonly", "true");
   playerNameInputEl.classList.add("start-input-locked");
@@ -143,7 +174,7 @@ function syncEmbeddedStartScreen() {
 
   if (!platformSessionToken) {
     setMessage("Sessão da plataforma ausente. O jogo abre, mas o resultado oficial fica bloqueado.");
-  } else if (window.MyGaming && !window.MyGaming.isSessionValidated()) {
+  } else if (!sessionValidated) {
     setMessage("Validando sessão da plataforma...");
   }
 }
@@ -151,11 +182,6 @@ function syncEmbeddedStartScreen() {
 function syncEmbeddedRankingUI() {
   if (!embeddedMode) {
     return;
-  }
-
-  const rankingSection = rankingListEl?.closest(".ranking-panel");
-  if (rankingSection) {
-    rankingSection.hidden = true;
   }
 
   if (rankingOpenAllButton) {
@@ -614,6 +640,10 @@ function registerRankingEntry() {
 function startGame() {
   ensureAudioContext();
   const rawName = embeddedMode ? resolveEmbeddedPlayerName() : playerNameInputEl.value.trim();
+  if (embeddedMode && !window.MyGaming?.isSessionValidated?.()) {
+    setMessage("Aguarde a validacao da sessao da plataforma para iniciar.");
+    return;
+  }
   if (!rawName) {
     playerNameInputEl.classList.add("start-input-error");
     playerNameInputEl.focus();
@@ -1004,11 +1034,15 @@ setRankingInspectHandler((entry) => {
 });
 
 window.addEventListener("mygaming:session-meta", () => {
-  if (!embeddedMode || state.hasStarted) {
+  if (!embeddedMode) {
     return;
   }
 
-  syncEmbeddedStartScreen();
+  applyEmbeddedBootstrap();
+
+  if (!state.hasStarted) {
+    syncEmbeddedStartScreen();
+  }
 });
 
 window.addEventListener("beforeunload", () => {
@@ -1019,6 +1053,9 @@ resetPhase(state, claw);
 rankingEntries = normalizeRanking(rankingEntries);
 saveRanking();
 syncEmbeddedRankingUI();
+if (embeddedMode) {
+  applyEmbeddedBootstrap();
+}
 if (!restoreGameProgress()) {
   renderCollection(state);
   renderRanking(rankingEntries, state.playerName);
