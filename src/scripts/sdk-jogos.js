@@ -13,6 +13,8 @@ const integrationState = {
   playerName: "",
   rankingSnapshot: [],
   topScore: 0,
+  runtimeChannel: "local",
+  betaNaoContaRanking: false,
   handshakeAttempts: 0,
   handshakeRetryTimerId: 0,
 };
@@ -65,6 +67,8 @@ function refreshMeta() {
     playerName: integrationState.playerName,
     rankingSnapshot: integrationState.rankingSnapshot,
     topScore: integrationState.topScore,
+    runtimeChannel: integrationState.runtimeChannel,
+    betaNaoContaRanking: integrationState.betaNaoContaRanking,
     sessionStatus: getSessionStatus(),
     handshakeRequested: integrationState.handshakeRequested,
     handshakeConfirmed: integrationState.handshakeConfirmed,
@@ -237,6 +241,9 @@ window.addEventListener("message", (event) => {
     if (incomingNickname) {
       integrationState.playerName = incomingNickname;
     }
+    const runtimeChannel = String(data.payload?.canalRuntime ?? data.payload?.runtimeChannel ?? "publico").trim().toLowerCase();
+    integrationState.runtimeChannel = runtimeChannel || "publico";
+    integrationState.betaNaoContaRanking = Boolean(data.payload?.betaNaoContaRanking) || integrationState.runtimeChannel === "beta";
     integrationState.rankingSnapshot = normalizeRankingSnapshot(data.payload?.rankingSnapshot);
     integrationState.topScore = Number(data.payload?.topScore) || integrationState.rankingSnapshot[0]?.pontos || 0;
     integrationState.handshakeConfirmed = true;
@@ -291,6 +298,8 @@ window.MyGaming.getSessionStatus = () => getSessionStatus();
 window.MyGaming.getPlayerName = () => integrationState.playerName || "";
 window.MyGaming.getRankingSnapshot = () => integrationState.rankingSnapshot.map((entry) => ({ ...entry }));
 window.MyGaming.getTopScore = () => integrationState.topScore || 0;
+window.MyGaming.getRuntimeChannel = () => integrationState.runtimeChannel;
+window.MyGaming.isBetaSession = () => integrationState.betaNaoContaRanking;
 window.MyGaming.registrarEvento = (evento) => send("registrarEvento", evento);
 window.MyGaming.atualizarPontuacao = (payload) => send("atualizarPontuacao", payload);
 window.MyGaming.finalizarPartida = (payload) => send("finalizarPartida", payload);

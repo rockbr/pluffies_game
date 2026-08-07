@@ -30,7 +30,9 @@ $requiredPaths = @(
 $manifestReferencedFiles = @(
   $manifest.arquivo_inicial,
   $manifest.icone,
-  $manifest.capa
+  $manifest.capa,
+  $manifest.badge_primeira_partida.imagem,
+  $manifest.badge_beta_tester.imagem
 ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
 
 $packagePaths = @(
@@ -161,6 +163,8 @@ Write-Host ""
 Write-Host "Conteudo validado para upload no My Gaming:"
 Write-Host "- manifesto.json na raiz"
 Write-Host "- arquivo inicial, icone e capa na raiz do ZIP"
+Write-Host "- imagem da badge de primeira partida incluida"
+Write-Host "- imagem da badge beta incluida quando declarada no manifesto"
 Write-Host "- pastas src/ e assets/ incluidas"
 Write-Host "- contrato de integracao conferido"
 Write-Host "- sem README.md ou arquivos fora do padrao"

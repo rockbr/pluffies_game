@@ -11,6 +11,7 @@ Pluffies e um jogo de garra em estilo arcade. O jogador move a garra para captur
 - `manifesto.json`: contrato de integracao e metadados do jogo
 - `index.html`: entrada principal
 - `assets/`: icones, favicon e capa
+- `assets/badges/`: artes de badges enviadas para a My Gaming
 - `src/scripts/`: bootstrap e integracao com a My Gaming
 - `src/js/`: logica principal
 - `src/styles/`: folha de estilo do jogo
@@ -67,3 +68,5 @@ powershell -ExecutionPolicy Bypass -File .\tools\publish-my-gaming.ps1 -Destinat
 - o ranking oficial fica na My Gaming, nao no jogo
 - o ranking local so vale para uso fora da plataforma
 - em modo embarcado, o nome do jogador vem da sessao da plataforma e nao deve ser alterado manualmente
+- a badge de primeira partida e declarada em `manifesto.json` no bloco `badge_primeira_partida`
+- a badge beta opcional pode ser declarada em `manifesto.json` no bloco `badge_beta_tester`

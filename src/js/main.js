@@ -63,6 +63,8 @@ const memoryStorage = new Map();
 let rankingEntries = embeddedMode ? [] : loadRanking();
 let audioContext = null;
 let lastPersistAt = 0;
+let embeddedRuntimeChannel = "local";
+let betaSessionEnabled = false;
 
 state.soundMuted = readStorage(SOUND_STORAGE_KEY) === "1";
 LEGACY_RANKING_STORAGE_KEYS.forEach(removeStorage);
@@ -159,6 +161,18 @@ function applyEmbeddedBootstrap() {
   decorateRankingSummary();
 }
 
+function syncEmbeddedRuntimeState() {
+  if (!embeddedMode) {
+    return;
+  }
+
+  const runtimeChannel = String(window.MyGaming?.getRuntimeChannel?.() ?? "").trim().toLowerCase();
+  const betaFlag = Boolean(window.MyGaming?.isBetaSession?.());
+
+  embeddedRuntimeChannel = runtimeChannel || (betaFlag ? "beta" : "publico");
+  betaSessionEnabled = betaFlag || embeddedRuntimeChannel === "beta";
+}
+
 function syncEmbeddedStartScreen() {
   if (!embeddedMode) {
     return;
@@ -176,6 +190,8 @@ function syncEmbeddedStartScreen() {
     setMessage("Sessão da plataforma ausente. O jogo abre, mas o resultado oficial fica bloqueado.");
   } else if (!sessionValidated) {
     setMessage("Validando sessão da plataforma...");
+  } else if (betaSessionEnabled || embeddedRuntimeChannel === "beta") {
+    setMessage("Modo beta ativo. As partidas desta sessão não entram no ranking oficial.");
   }
 }
 
@@ -665,7 +681,11 @@ function startGame() {
   renderCollection(state);
   renderRanking(rankingEntries, state.playerName);
   decorateRankingSummary();
-  setMessage(`Boa sorte, ${state.playerName}. Pegue os ursos antes do tempo acabar.`);
+  if (betaSessionEnabled || embeddedRuntimeChannel === "beta") {
+    setMessage(`Modo beta ativo. Boa sorte, ${state.playerName}. As partidas desta sessão não entram no ranking oficial.`);
+  } else {
+    setMessage(`Boa sorte, ${state.playerName}. Pegue os ursos antes do tempo acabar.`);
+  }
   saveGameProgress(true);
 }
 
@@ -1038,6 +1058,7 @@ window.addEventListener("mygaming:session-meta", () => {
     return;
   }
 
+  syncEmbeddedRuntimeState();
   applyEmbeddedBootstrap();
 
   if (!state.hasStarted) {
@@ -1054,6 +1075,7 @@ rankingEntries = normalizeRanking(rankingEntries);
 saveRanking();
 syncEmbeddedRankingUI();
 if (embeddedMode) {
+  syncEmbeddedRuntimeState();
   applyEmbeddedBootstrap();
 }
 if (!restoreGameProgress()) {
